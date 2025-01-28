@@ -1,32 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Instagram Post Builder</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Post Creator</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="controls">
-    <button id="resetButton">Reset</button>
-    <button id="showPostButton">Show Final Post</button>
-  </div>
 
-  <div class="canvas-container" id="canvasContainer">
+<h2>Create Your Instagram Post</h2>
+
+<div class="container">
+    <div class="menu" id="assetMenu">
+        <div draggable="true" data-url="photo1.jpg">
+            <img src="photo1.jpg" alt="Asset 1"> Asset 1
+        </div>
+        <div draggable="true" data-url="photo2.jpg">
+            <img src="photo2.jpg" alt="Asset 2"> Asset 2
+        </div>
+        <div draggable="true" data-url="photo3.jpg">
+            <img src="photo3.jpg" alt="Asset 3"> Asset 3
+        </div>
+        <div draggable="true" data-url="photo4.jpg">
+            <img src="photo4.jpg" alt="Asset 4"> Asset 4
+        </div>
+        <div draggable="true" data-url="photo5.jpg">
+            <img src="photo5.jpg" alt="Asset 5"> Asset 5
+        </div>
+        <div draggable="true" data-url="photo6.jpg">
+            <img src="photo6.jpg" alt="Asset 6"> Asset 6
+        </div>
+    </div>
+
     <div class="canvas" id="canvas"></div>
-  </div>
-  
-  <div class="assets-container" id="assetsContainer">
-    <img src="asset1.png" class="draggable" id="asset1" draggable="true">
-    <img src="asset2.png" class="draggable" id="asset2" draggable="true">
-    <!-- Add more assets as needed -->
-  </div>
+    
+</div>
 
-  <div class="description-container">
-    <label for="description">Post Description:</label>
-    <textarea id="description" rows="4" cols="50"></textarea>
-  </div>
+<script src="main.js"></script>
 
-  <script src="script.js"></script>
 </body>
 </html>
