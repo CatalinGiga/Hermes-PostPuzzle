@@ -67,7 +67,7 @@ h2 {
   margin: 10px 5px;
   border: 1px solid #eee;
   cursor: grab;
-  background-color: white;
+  background-color: rgb(189, 189, 189);
   display: flex;
   align-items: center;
   justify-content: center;
