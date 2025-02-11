@@ -109,7 +109,7 @@ h2 {
   transition: all 0.2s ease;
   border: 2px solid transparent;
   border-radius: 4px;
-  transform-origin: center;
+  transform-origin: center center;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
   backface-visibility: hidden;
@@ -328,4 +328,25 @@ h2 {
 
 body.fullscreen .fullscreen-icon {
     transform: rotate(180deg);
+}
+
+/* Update the rotate-handle class */
+.rotate-handle {
+    width: 20px;
+    height: 20px;
+    background-color: #ff0000;
+    position: absolute;
+    left: 50%;
+    top: -25px;
+    transform: translateX(-50%);
+    cursor: grab;
+    border-radius: 50%;
+    display: none; /* Hide by default */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Show rotate handle only on hover or when selected */
+.asset:hover .rotate-handle,
+.asset.selected .rotate-handle {
+    display: block;
 }

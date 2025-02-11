@@ -58,11 +58,20 @@ canvas.addEventListener('drop', (e) => {
 
 let zIndexCounter = 1;
 
+// Add these variables at the top with other state variables
+let isRotating = false;
+let rotatingAsset = null;
+let initialAngle = 0;
+let centerX, centerY;
+
 function createAsset(url, x, y) {
     const asset = document.createElement('div');
     asset.classList.add('asset');
     asset.style.backgroundImage = `url('${url}')`;
-    asset.style.zIndex = zIndexCounter++;
+    
+    // Set initial z-index by counting existing assets
+    const assets = Array.from(document.querySelectorAll('.asset'));
+    asset.style.zIndex = assets.length + 1;
 
     const img = new Image();
     img.src = url;
@@ -71,8 +80,10 @@ function createAsset(url, x, y) {
         const initialWidth = 100;
         asset.style.width = `${initialWidth}px`;
         asset.style.height = `${initialWidth / aspectRatio}px`;
-        asset.style.left = `${Math.min(x - initialWidth / 2, canvas.clientWidth - initialWidth)}px`;
-        asset.style.top = `${Math.min(y - (initialWidth / aspectRatio) / 2, canvas.clientHeight - (initialWidth / aspectRatio))}px`;
+        
+        // Remove the constraints from initial positioning
+        asset.style.left = `${x - initialWidth / 2}px`;
+        asset.style.top = `${y - (initialWidth / aspectRatio) / 2}px`;
 
         const resizeHandle = document.createElement('div');
         resizeHandle.classList.add('resize-handle');
@@ -94,8 +105,6 @@ function createAsset(url, x, y) {
         moveUpBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             moveLayer(asset, 1);
-            layerControls.style.display = "flex";
-            asset.classList.add('selected');
         });
 
         const moveDownBtn = document.createElement('button');
@@ -103,8 +112,6 @@ function createAsset(url, x, y) {
         moveDownBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             moveLayer(asset, -1);
-            layerControls.style.display = "flex";
-            asset.classList.add('selected');
         });
 
         layerControls.appendChild(deleteBtn);
@@ -118,6 +125,17 @@ function createAsset(url, x, y) {
             e.stopPropagation();
             startResize(e, asset, aspectRatio);
         });
+
+        // Add rotation handle
+        const rotateHandle = document.createElement('div');
+        rotateHandle.classList.add('rotate-handle');
+        asset.appendChild(rotateHandle);
+
+        // Add rotation event listener
+        rotateHandle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            startRotation(e, asset);
+        });
     };
     canvas.appendChild(asset);
 }
@@ -128,51 +146,71 @@ function selectAsset(asset, event) {
     // Deselect all assets first
     document.querySelectorAll('.asset').forEach(el => {
         el.classList.remove('selected');
-        el.querySelector('.layer-controls').style.display = "none";
+        const controls = el.querySelector('.layer-controls');
+        const resizeHandle = el.querySelector('.resize-handle');
+        const rotateHandle = el.querySelector('.rotate-handle');
+        
+        if (controls) controls.style.display = "none";
+        if (resizeHandle) resizeHandle.style.display = "none";
+        if (rotateHandle) rotateHandle.style.display = "none";
     });
 
     // Select the clicked asset
     asset.classList.add('selected');
-    const layerControls = asset.querySelector('.layer-controls');
-    layerControls.style.display = "flex";
+    const controls = asset.querySelector('.layer-controls');
+    const rotateHandle = asset.querySelector('.rotate-handle');
+    const resizeHandle = asset.querySelector('.resize-handle');
+    
+    if (controls) controls.style.display = "flex";
+    if (rotateHandle) rotateHandle.style.display = "block";
+    if (resizeHandle) resizeHandle.style.display = "block";
 }
 
 // Deselect all assets when clicking outside
-canvas.addEventListener('click', () => {
-    document.querySelectorAll('.asset').forEach(el => {
-        el.classList.remove('selected');
-        el.querySelector('.layer-controls').style.display = "none"; // Hide layer controls
-    });
+canvas.addEventListener('click', (e) => {
+    if (e.target === canvas) {
+        document.querySelectorAll('.asset').forEach(el => {
+            el.classList.remove('selected');
+            const controls = el.querySelector('.layer-controls');
+            const resizeHandle = el.querySelector('.resize-handle');
+            const rotateHandle = el.querySelector('.rotate-handle');
+            
+            if (controls) controls.style.display = "none";
+            if (resizeHandle) resizeHandle.style.display = "none";
+            if (rotateHandle) rotateHandle.style.display = "none";
+        });
+    }
 });
 
 function moveLayer(asset, direction) {
     const assets = Array.from(document.querySelectorAll('.asset'));
-    const currentZ = parseInt(asset.style.zIndex, 10);
     
-    // Find all current z-indices
-    const zIndices = assets.map(a => parseInt(a.style.zIndex, 10) || 0);
+    // Normalize z-indices
+    assets.sort((a, b) => parseInt(a.style.zIndex || 0) - parseInt(b.style.zIndex || 0));
+    assets.forEach((a, index) => {
+        a.style.zIndex = index + 1; // Ensure no gaps in z-index
+    });
+
+    const currentZ = parseInt(asset.style.zIndex);
     
-    let newZ;
-    if (direction > 0) {
-        // Moving up - place above highest layer
-        newZ = Math.max(...zIndices) + 1;
-    } else {
-        // Moving down - ensure we don't go below 1
-        const minZ = Math.min(...zIndices);
-        if (minZ <= 1) {
-            // If we're already at the bottom, shift all other elements up
-            assets.forEach(a => {
-                if (a !== asset) {
-                    a.style.zIndex = parseInt(a.style.zIndex, 10) + 1;
-                }
-            });
-            newZ = 1;
-        } else {
-            newZ = minZ - 1;
+    if (direction > 0 && currentZ < assets.length) {
+        // Moving up
+        const swapAsset = assets.find(a => parseInt(a.style.zIndex) === currentZ + 1);
+        if (swapAsset) {
+            swapAsset.style.zIndex = currentZ;
+            asset.style.zIndex = currentZ + 1;
+        }
+    } else if (direction < 0 && currentZ > 1) {
+        // Moving down
+        const swapAsset = assets.find(a => parseInt(a.style.zIndex) === currentZ - 1);
+        if (swapAsset) {
+            swapAsset.style.zIndex = currentZ;
+            asset.style.zIndex = currentZ - 1;
         }
     }
-    
-    asset.style.zIndex = newZ;
+
+    // Keep the asset selected and controls visible after moving
+    selectAsset(asset, { stopPropagation: () => {} });
 }
 
 let activeAsset = null;
@@ -192,8 +230,8 @@ function startDrag(e) {
 
 function drag(e) {
     if (!isDragging || !activeAsset) return;
-    activeAsset.style.left = `${Math.min(Math.max(e.clientX - offsetX, 0), canvas.clientWidth - activeAsset.clientWidth)}px`;
-    activeAsset.style.top = `${Math.min(Math.max(e.clientY - offsetY, 0), canvas.clientHeight - activeAsset.clientHeight)}px`;
+    activeAsset.style.left = `${e.clientX - offsetX}px`;
+    activeAsset.style.top = `${e.clientY - offsetY}px`;
 }
 
 function endDrag() {
@@ -233,21 +271,26 @@ const saveButton = document.getElementById('saveButton');
 
 saveButton.addEventListener('click', async () => {
     try {
-        // Remove any selected state and controls before capturing
+        // Hide controls
         document.querySelectorAll('.asset').forEach(el => {
             el.classList.remove('selected');
-            el.querySelector('.layer-controls').style.display = "none";
-            el.querySelector('.resize-handle').style.display = "none";
+            const controls = el.querySelector('.layer-controls');
+            const resizeHandle = el.querySelector('.resize-handle');
+            const rotateHandle = el.querySelector('.rotate-handle');
+            
+            if (controls) controls.style.display = "none";
+            if (resizeHandle) resizeHandle.style.display = "none";
+            if (rotateHandle) rotateHandle.style.display = "none";
         });
 
         // Get the canvas element
         const canvasElement = document.getElementById('canvas');
         
-        // Create a temporary canvas with higher resolution
+        // Create a temporary canvas
         const tempCanvas = document.createElement('canvas');
         const ctx = tempCanvas.getContext('2d');
         
-        // Set dimensions to Instagram's preferred size (1080x1080)
+        // Set dimensions (1080x1080 for Instagram)
         tempCanvas.width = 1080;
         tempCanvas.height = 1080;
         
@@ -255,41 +298,51 @@ saveButton.addEventListener('click', async () => {
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
         
-        // Get all assets and draw them to the canvas
+        // Get all assets and sort by z-index (lowest to highest)
         const assets = Array.from(canvasElement.querySelectorAll('.asset'));
-        
-        // Sort assets by z-index
         assets.sort((a, b) => {
-            return (parseInt(a.style.zIndex) || 0) - (parseInt(b.style.zIndex) || 0);
+            const zA = parseInt(a.style.zIndex) || 0;
+            const zB = parseInt(b.style.zIndex) || 0;
+            return zA - zB; // Draw from bottom to top
         });
 
-        // Load and draw each asset
-        await Promise.all(assets.map(async (asset) => {
-            return new Promise((resolve) => {
+        // Draw each asset
+        for (const asset of assets) {
+            await new Promise((resolve) => {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
                 
-                // Get the background image URL
                 const bgImage = asset.style.backgroundImage;
                 const url = bgImage.slice(4, -1).replace(/['"]/g, '');
                 
                 img.onload = () => {
-                    // Calculate scaled positions and dimensions
-                    const scale = 1080 / 600; // ratio between desired size and current canvas size
+                    // Calculate scale factor
+                    const scale = 1080 / canvasElement.offsetWidth;
+
+                    // Get position and size
                     const left = parseFloat(asset.style.left) * scale;
                     const top = parseFloat(asset.style.top) * scale;
                     const width = asset.offsetWidth * scale;
                     const height = asset.offsetHeight * scale;
-                    
-                    ctx.drawImage(img, left, top, width, height);
+
+                    // Get rotation
+                    const rotation = getCurrentRotation(asset);
+
+                    // Apply transformations
+                    ctx.save();
+                    ctx.translate(left + width / 2, top + height / 2);
+                    ctx.rotate(rotation * Math.PI / 180);
+                    ctx.drawImage(img, -width / 2, -height / 2, width, height);
+                    ctx.restore();
+
                     resolve();
                 };
                 
                 img.src = url;
             });
-        }));
+        }
 
-        // Convert to blob and download
+        // Save the image
         tempCanvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -298,10 +351,17 @@ saveButton.addEventListener('click', async () => {
             link.click();
             URL.revokeObjectURL(url);
             
-            // Restore controls visibility
+            // Restore controls
             document.querySelectorAll('.asset').forEach(el => {
-                el.querySelector('.resize-handle').style.removeProperty('display');
-                el.querySelector('.layer-controls').style.removeProperty('display');
+                const controls = el.querySelector('.layer-controls');
+                const resizeHandle = el.querySelector('.resize-handle');
+                const rotateHandle = el.querySelector('.rotate-handle');
+                
+                if (resizeHandle) resizeHandle.style.removeProperty('display');
+                if (rotateHandle) rotateHandle.style.removeProperty('display');
+                if (controls && el.classList.contains('selected')) {
+                    controls.style.removeProperty('display');
+                }
             });
         }, 'image/png', 1.0);
 
@@ -310,3 +370,80 @@ saveButton.addEventListener('click', async () => {
         alert('There was an error saving your image. Please try again.');
     }
 });
+
+// Add these new functions for rotation
+function startRotation(e, asset) {
+    e.stopPropagation(); // Prevent other events from interfering
+    isRotating = true;
+    rotatingAsset = asset;
+    
+    // Get the center point of the asset
+    const rect = asset.getBoundingClientRect();
+    centerX = rect.left + rect.width / 2;
+    centerY = rect.top + rect.height / 2;
+    
+    // Calculate initial angle
+    initialAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+    
+    // Get current rotation
+    const currentRotation = getCurrentRotation(asset);
+    
+    // Define rotate function in closure to maintain reference
+    function rotate(e) {
+        if (!isRotating || !rotatingAsset) return;
+        
+        // Calculate new angle
+        const newAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+        const angleDiff = (newAngle - initialAngle) * (180 / Math.PI);
+        
+        // Update rotation
+        rotatingAsset.style.transform = `rotate(${currentRotation + angleDiff}deg)`;
+    }
+    
+    // Define endRotation function in closure
+    function endRotation() {
+        if (!isRotating) return;
+        
+        isRotating = false;
+        
+        // Only show handles if the asset is selected
+        if (rotatingAsset) {
+            const rotateHandle = rotatingAsset.querySelector('.rotate-handle');
+            const resizeHandle = rotatingAsset.querySelector('.resize-handle');
+            if (rotateHandle && rotatingAsset.classList.contains('selected')) {
+                rotateHandle.style.display = "block";
+            }
+            if (resizeHandle && rotatingAsset.classList.contains('selected')) {
+                resizeHandle.style.display = "block";
+            }
+        }
+        
+        rotatingAsset = null;
+        document.removeEventListener('mousemove', rotate);
+        document.removeEventListener('mouseup', endRotation);
+    }
+    
+    // Add event listeners
+    document.addEventListener('mousemove', rotate);
+    document.addEventListener('mouseup', endRotation);
+}
+
+// Update getCurrentRotation to handle invalid transforms
+function getCurrentRotation(element) {
+    try {
+        const style = window.getComputedStyle(element);
+        const transform = style.transform;
+        
+        // Handle case where there is no transform
+        if (transform === 'none' || !transform) {
+            return 0;
+        }
+        
+        const matrix = new WebKitCSSMatrix(transform);
+        const angle = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+        return angle;
+    } catch (error) {
+        console.error('Error getting rotation:', error);
+        return 0;
+    }
+}
