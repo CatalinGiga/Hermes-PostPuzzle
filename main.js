@@ -43,14 +43,21 @@ function createAsset(url, x, y) {
 
         const layerControls = document.createElement('div');
         layerControls.classList.add('layer-controls');
+        layerControls.style.display = "none"; // Hide by default
 
         const moveUpBtn = document.createElement('button');
         moveUpBtn.textContent = "⬆️";
-        moveUpBtn.addEventListener('click', () => moveLayer(asset, 3));
+        moveUpBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            moveLayer(asset, 3);
+        });
 
         const moveDownBtn = document.createElement('button');
         moveDownBtn.textContent = "⬇️";
-        moveDownBtn.addEventListener('click', () => moveLayer(asset, -3));
+        moveDownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            moveLayer(asset, -3);
+        });
 
         layerControls.appendChild(moveUpBtn);
         layerControls.appendChild(moveDownBtn);
@@ -68,19 +75,24 @@ function createAsset(url, x, y) {
 
 function selectAsset(asset, event) {
     event.stopPropagation();
-    
-    if (event.ctrlKey) {
-        asset.classList.toggle('selected');
-    } else {
-        document.querySelectorAll('.asset').forEach(el => el.classList.remove('selected'));
-        asset.classList.add('selected');
-    }
 
+    // Deselect all assets first
+    document.querySelectorAll('.asset').forEach(el => {
+        el.classList.remove('selected');
+        el.querySelector('.layer-controls').style.display = "none"; // Hide layer controls
+    });
+
+    // Select the clicked asset
+    asset.classList.add('selected');
+    asset.querySelector('.layer-controls').style.display = "flex"; // Show layer controls
 }
 
 // Deselect all assets when clicking outside
 canvas.addEventListener('click', () => {
-    document.querySelectorAll('.asset').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.asset').forEach(el => {
+        el.classList.remove('selected');
+        el.querySelector('.layer-controls').style.display = "none"; // Hide layer controls
+    });
 });
 
 function moveLayer(asset, direction) {
